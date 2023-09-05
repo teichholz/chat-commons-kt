@@ -6,7 +6,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MessagePayloadSocket(val from: ReceiverPayload, val message: String, val sent: LocalDateTime)
+data class MessagePayloadSocket(val from: ReceiverPayload, val to: ReceiverPayload, val message: String, val sent: LocalDateTime)
 
 @Serializable
 data class AuthPayloadSocket(val receiver: ReceiverPayloadWithId, val lastMessage: Long = 0)
@@ -16,9 +16,9 @@ sealed class Protocol<T> {
     abstract var payload: T
 
     @Serializable
-    class ACK : Protocol<Int>() {
+    class ACK : Protocol<Long>() {
         override var type: String = "ACK"
-        override var payload: Int = 0
+        override var payload: Long = 0
     }
 
     @Serializable
