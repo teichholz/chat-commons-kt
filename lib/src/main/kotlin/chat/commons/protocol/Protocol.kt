@@ -9,50 +9,68 @@ import kotlinx.serialization.Serializable
 data class MessagePayloadSocket(val from: ReceiverPayload, val to: ReceiverPayload, val message: String, val sent: LocalDateTime)
 
 @Serializable
-data class AuthPayloadSocket(val receiver: ReceiverPayloadWithId, val lastMessage: Long = 0)
+data class AuthPayloadSocket(val lastMessage: Long = 0)
 
-sealed class Protocol<T> {
-    abstract var type : String
-    abstract var payload: T
+@Serializable
+sealed class Protocol {
+    protected abstract var kind : String
 
     @Serializable
-    class ACK : Protocol<Long>() {
-        override var type: String = "ACK"
-        override var payload: Long = 0
+    class ACK : Protocol() {
+        override var kind: String = "ACK"
+        var payload: Long = 0
     }
 
     @Serializable
-    class AUTH : Protocol<AuthPayloadSocket>() {
-        override var type: String = "AUTH"
-        override lateinit var payload: AuthPayloadSocket
+    class AUTH : Protocol() {
+        override var kind: String = "AUTH"
+        lateinit var payload: AuthPayloadSocket
     }
 
     @Serializable
-    class MESSAGE : Protocol<MessagePayloadSocket>() {
-        override var type: String = "MESSAGE"
-        override lateinit var payload: MessagePayloadSocket
+    class MESSAGE : Protocol() {
+        override var kind: String = "MESSAGE"
+        lateinit var payload: MessagePayloadSocket
     }
 }
 
-fun <T> Protocol<T>.isAck() = this.type == "ACK"
-fun <T> Protocol<T>.isAuth() = this.type == "AUTH"
-fun <T> Protocol<T>.isMessage() = this.type == "MESSAGE"
+fun Protocol.isAck() = this is Protocol.ACK
+fun Protocol.isAuth() = this is Protocol.AUTH
+fun Protocol.isMessage() = this is Protocol.MESSAGE
 
-suspend fun <T> Protocol<T>.ack(block: suspend (Protocol.ACK) -> Unit) {
+fun ack(block: Protocol.ACK.() -> Unit): Protocol {
+    val ack = Protocol.ACK()
+    ack.block()
+    return ack
+}
+
+suspend fun Protocol.ack(block: suspend (Protocol.ACK) -> Unit) {
     if (this.isAck()) {
         val ack = this as Protocol.ACK
         block(ack)
     }
 }
 
-suspend fun <T> Protocol<T>.auth(block: suspend (Protocol.AUTH) -> Unit) {
+fun auth(block: Protocol.AUTH.() -> Unit): Protocol {
+    val auth = Protocol.AUTH()
+    auth.block()
+    return auth
+}
+
+suspend fun Protocol.auth(block: suspend (Protocol.AUTH) -> Unit) {
     if (this.isAuth()) {
         val auth = this as Protocol.AUTH
         block(auth)
     }
 }
 
-suspend fun <T> Protocol<T>.message(block: suspend (Protocol.MESSAGE) -> Unit) {
+fun message(block: Protocol.MESSAGE.() -> Unit): Protocol {
+    val message = Protocol.MESSAGE()
+    message.block()
+    return message
+}
+
+suspend fun Protocol.message(block: suspend (Protocol.MESSAGE) -> Unit) {
     if (this.isMessage()) {
         val message = this as Protocol.MESSAGE
         block(message)
